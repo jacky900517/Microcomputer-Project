@@ -1,4 +1,4 @@
-# MAZE QUEST
+# 第12組
 
 MicroPython 期末專題：掌上型迷宮逃脫遊戲。
 
