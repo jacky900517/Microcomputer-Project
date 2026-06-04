@@ -42,32 +42,12 @@
 |rank|顯示出分數排名|等待玩家回主選單|按下按鈕 → menu|
 |setting|顯示音量|等待玩家調整音量|按下按鈕B → menu|
 
-## OLED 畫面草圖
-
-![state草圖](state.png)
-
-## 模組架構
-
-|檔案名稱|職責說明|對外提供的主要函式或類別|
-|-|-|-|
-|main.py|程式進入點，初始化硬體物件，建立各模組，啟動 uasyncio 任務，保持 main.py 在 150 行內|main()、game_loop()|
-|game.py|遊戲核心邏輯，管理 FSM 狀態、關卡切換、玩家位置、碰撞偵測、倒計時、分數計算|GameEngine、update()、handle_input()、get_snapshot()|
-|map_data.py|儲存三個迷宮關卡資料、起點、終點，讓 game.py 載入地圖時不需要把地圖寫在主程式中|LEVEL_MAPS、START_POINTS、END_POINTS|
-|display_unit.py|管理 OLED 畫面，依照目前狀態繪製選單、迷宮、暫停、結算、排名、設定畫面|DisplayUnit、draw_menu()、draw_game()、draw_finish()、draw_rank()、draw_setting()|
-|input_unit.py|整合按鈕 A、按鈕 B、搖桿按壓，做去彈跳並轉成遊戲事件|InputUnit、read_events()、is_confirm()、is_back()|
-|joystick.py|讀取搖桿 X/Y 軸 ADC，判斷方向，並在 setting 狀態提供音量調整數值|Joystick、direction()、volume_level()|
-|score_manager.py|管理 Flash 中的分數檔案，紀錄最高 5 名與最後一次遊戲分數|ScoreManager、load_scores()、save_score()、get_top_scores()、get_last_score()|
-|sounds.py|用 PWM 控制蜂鳴器，播放背景音樂與事件音效，並支援音量設定|SoundManager、play_bgm()、play_effect()、set_volume()、stop()|
-|config.py|集中放硬體腳位、畫面大小、倒計時秒數、分數規則等常數|PIN_OLED_SDA、PIN_BUZZER、LEVEL_TIME、BASE_SCORE|
-
-說明模組之間的資料傳遞方式，以及並行任務的分工：
-
 ```mermaid
 stateDiagram-v2
     [*] --> menu
 
     menu --> level_1: 選 START GAME / A或SW確認
-    menu --> rank: 選 HIGH SCORES / A或SW確認
+    menu --> rank:           選 HIGH SCORES / A或SW確認
     menu --> setting: 選 VOLUME / A或SW確認
     menu --> menu: 搖桿上下移動選單
 
@@ -99,6 +79,28 @@ stateDiagram-v2
     setting --> setting: 搖桿左右調整音量
     setting --> menu: A / SW / B 回主選單
 ```
+
+## OLED 畫面草圖
+
+![state草圖](state.png)
+
+## 模組架構
+
+|檔案名稱|職責說明|對外提供的主要函式或類別|
+|-|-|-|
+|main.py|程式進入點，初始化硬體物件，建立各模組，啟動 uasyncio 任務，保持 main.py 在 150 行內|main()、game_loop()|
+|game.py|遊戲核心邏輯，管理 FSM 狀態、關卡切換、玩家位置、碰撞偵測、倒計時、分數計算|GameEngine、update()、handle_input()、get_snapshot()|
+|map_data.py|儲存三個迷宮關卡資料、起點、終點，讓 game.py 載入地圖時不需要把地圖寫在主程式中|LEVEL_MAPS、START_POINTS、END_POINTS|
+|display_unit.py|管理 OLED 畫面，依照目前狀態繪製選單、迷宮、暫停、結算、排名、設定畫面|DisplayUnit、draw_menu()、draw_game()、draw_finish()、draw_rank()、draw_setting()|
+|input_unit.py|整合按鈕 A、按鈕 B、搖桿按壓，做去彈跳並轉成遊戲事件|InputUnit、read_events()、is_confirm()、is_back()|
+|joystick.py|讀取搖桿 X/Y 軸 ADC，判斷方向，並在 setting 狀態提供音量調整數值|Joystick、direction()、volume_level()|
+|score_manager.py|管理 Flash 中的分數檔案，紀錄最高 5 名與最後一次遊戲分數|ScoreManager、load_scores()、save_score()、get_top_scores()、get_last_score()|
+|sounds.py|用 PWM 控制蜂鳴器，播放背景音樂與事件音效，並支援音量設定|SoundManager、play_bgm()、play_effect()、set_volume()、stop()|
+|config.py|集中放硬體腳位、畫面大小、倒計時秒數、分數規則等常數|PIN_OLED_SDA、PIN_BUZZER、LEVEL_TIME、BASE_SCORE|
+
+說明模組之間的資料傳遞方式，以及並行任務的分工：
+
+
 
 main.py 會建立 GameEngine、DisplayUnit、InputUnit、Joystick、ScoreManager、SoundManager。InputUnit 與 Joystick 負責把硬體輸入轉成方向或按鍵事件，GameEngine 只接收整理後的事件，不直接操作硬體。GameEngine 每次 update() 後提供一份 snapshot，例如目前 state、關卡、玩家位置、剩餘秒數、分數、排名資料、音量值。DisplayUnit 只根據 snapshot 畫畫面，不改遊戲狀態。SoundManager 依照 GameEngine 回傳的音效事件或目前倒數階段切換音樂。ScoreManager 只在進入 finish 狀態時計算並寫入 Flash，避免每一幀都寫檔造成 Flash 壽命浪費。
 
