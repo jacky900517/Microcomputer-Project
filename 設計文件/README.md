@@ -62,6 +62,44 @@
 
 說明模組之間的資料傳遞方式，以及並行任務的分工：
 
+```mermaid
+stateDiagram-v2
+    [*] --> menu
+
+    menu --> level_1: 選 START GAME / A或SW確認
+    menu --> rank: 選 HIGH SCORES / A或SW確認
+    menu --> setting: 選 VOLUME / A或SW確認
+    menu --> menu: 搖桿上下移動選單
+
+    level_1 --> level_1: 搖桿移動 / 碰撞判斷
+    level_1 --> level_2: 到達出口
+    level_1 --> pause: 按 B 暫停
+    level_1 --> finish: 時間到
+
+    level_2 --> level_2: 搖桿移動 / 碰撞判斷
+    level_2 --> level_3: 到達出口
+    level_2 --> pause: 按 B 暫停
+    level_2 --> finish: 時間到
+
+    level_3 --> level_3: 搖桿移動 / 碰撞判斷
+    level_3 --> finish: 到達出口 / 遊戲通關
+    level_3 --> pause: 按 B 暫停
+    level_3 --> finish: 時間到
+
+    pause --> level_1: 選 RESUME / 回到暫停前關卡
+    pause --> level_2: 選 RESUME / 回到暫停前關卡
+    pause --> level_3: 選 RESUME / 回到暫停前關卡
+    pause --> menu: 選 MAIN MENU
+    pause --> pause: 搖桿上下移動選項
+
+    finish --> menu: A / SW / B 回主選單
+
+    rank --> menu: A / SW / B 回主選單
+
+    setting --> setting: 搖桿左右調整音量
+    setting --> menu: A / SW / B 回主選單
+```
+
 main.py 會建立 GameEngine、DisplayUnit、InputUnit、Joystick、ScoreManager、SoundManager。InputUnit 與 Joystick 負責把硬體輸入轉成方向或按鍵事件，GameEngine 只接收整理後的事件，不直接操作硬體。GameEngine 每次 update() 後提供一份 snapshot，例如目前 state、關卡、玩家位置、剩餘秒數、分數、排名資料、音量值。DisplayUnit 只根據 snapshot 畫畫面，不改遊戲狀態。SoundManager 依照 GameEngine 回傳的音效事件或目前倒數階段切換音樂。ScoreManager 只在進入 finish 狀態時計算並寫入 Flash，避免每一幀都寫檔造成 Flash 壽命浪費。
 
 並行任務選擇：uasyncio
